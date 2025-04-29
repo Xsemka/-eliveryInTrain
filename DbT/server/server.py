@@ -1,20 +1,22 @@
 import pandas as pd
 import socket
+import rsa
+import json
+
 
 class UserManager:
     def __init__(self):
-        self.users = pd.read_csv("server/users.csv")
-
-    def registration(self, login, password, staffRights):
+        self.users = pd.read_csv("users.csv")
+    
+    def regestration(self, login, password, staffRights):
         if login not in self.users["login"]:
             self.users.loc[self.users.shape[0]] = [login, password, "0"*(12-int(len(str(self.users.shape[0])))) + str(self.users.shape[0]), staffRights]
-            self.users.to_csv("server/users.csv")
             return True
         else:
             return False
-
-
-
+        
+        self.users.to_csv("users.csv")
+        
     def login(self, login, password):
         if login in self.users["login"] and password == self.users[self.users["login"] == login]["password"]:
             return True
@@ -23,31 +25,50 @@ class UserManager:
 
 class OrderManager:
     def __init__(self):
-        self.orders = pd.read_csv("server/orders.csv")
+        self.orders = pd.read_csv("orders.csv")
     
     def addOrder(self, orderId, carriageNumber, placeNumber, dishesId, status):
         self.orders.loc[self.orders.shape[0]] = [orderId, carriageNumber, placeNumber, dishesId, status]
-        self.orders.to_csv("server/orders.csv")
+        self.orders.to_csv("orders.csv")
+        return True
 
 class Server:
     def __init__(self, host, port):
+        self.keys = pd.read_csv("keys.csv", index_col="addr")
         self.sock = socket.socket()
         self.sock.bind((host, port))
-        self.sock.listen(100)
+        self.sock.listen(1)
         
         self.um = UserManager()
         self.om = OrderManager()
 
     def managerRequest(self):
         client_socket, addr = self.sock.accept()
-        data = client_socket.recv(2048)
-        data = data.split()
-        if data[0] == "registrarion":
-            client_socket.send(f"{self.um.registration(data[1], data[2], data[3])}".encode())
+        data = client_socket.recv(4096)
+        if data.decode() == "1":
+            (publicKey, closedKey) = rsa.newkeys(4096)
+            if addr not in self.keys["addr"]:
+                self.keys.loc[self.keys.shape[0]] = [addr, publicKey, closedKey]
+                client_socket.send(self.keys[addr][1])
+            else:
+                self.keys[addr] = [addr, publicKey, closedKey]
 
-        if data[0] == "login":
-            client_socket.send(f"{self.um.login(data[1], data[2])}".encode())
+        data = rsa.decrypt(data, self.keys[addr][2])
+        data = json.loads(data.decode())
+        
+        if data["action"] == "register":
+            client_socket.send(self.um.regestration(data["login"], data["password"], data["staffRight"]))
 
-        if data[0] == "order":
-            client_socket.send(f"{self.om.addOrder(data[1], data[2], data[3], data[4], data[5])}".encode())
+        if data["action"] == "login":
+            client_socket.send(self.um.login(data["login"], data["password"]))
+
+        if data["action"] == "order":
+            client_socket.send(self.om.addOrder(data["orderId"], data["carriageNumber"], data["placeNumber"], data["dishesId"], data["status"]))
+        
+
+
+
+
+
+
         
