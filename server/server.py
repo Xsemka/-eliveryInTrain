@@ -35,6 +35,7 @@ class OrderManager:
 class Server:
     def __init__(self, host, port):
         self.keys = pd.read_csv("keys.csv", index_col="addr")
+        print(self.keys)
         self.sock = socket.socket()
         self.sock.bind((host, port))
         self.sock.listen(1)
@@ -48,12 +49,14 @@ class Server:
         if data.decode() == "1":
             (publicKey, closedKey) = rsa.newkeys(4096)
             if addr not in self.keys["addr"]:
-                self.keys.loc[self.keys.shape[0]] = [addr, publicKey, closedKey]
-                client_socket.send(self.keys[addr][1])
+                self.keys.loc[self.keys.shape[0]] = [addr, (publicKey.n, publicKey.e), (closedKey.n, closedKey.e, closedKey.d, closedKey.p, closedKey.q)]
+                print(self.keys[addr])
+                client_socket.send(str(self.keys[addr][0][1]).encode())
+                # print(self.keys["addr"][0][1])
             else:
                 self.keys[addr] = [addr, publicKey, closedKey]
-
-        data = rsa.decrypt(data, self.keys[addr][2])
+        print(self.keys[addr])
+        data = rsa.decrypt(data, rsa.PrivateKey(self.keys["addr"][0][1]))
         data = json.loads(data.decode())
         
         if data["action"] == "register":
