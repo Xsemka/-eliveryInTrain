@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 import math
 import csv
+import random
 
 from user.user import OrderManager
 
@@ -23,7 +24,7 @@ class MainApp(MDApp):
             self.sections = f.read().split("\n")
         self.cart = [0 for _ in range(len(self.prods))]
 
-        # self.om = OrderManager("localhost", 11111)
+        self.om = OrderManager("localhost", 11111)
         self.sm = MDScreenManager()
         self.auth_screen = Builder.load_file("data/kv/auth.kv")
         self.cart_screen = Builder.load_file("data/kv/cart.kv")
@@ -43,6 +44,10 @@ class MainApp(MDApp):
         self.sm.add_widget(self.auth_screen)
         self.sm.add_widget(self.cart_screen)
         # self.sm.add_widget(cart_screen)
+        wgt = Widget()
+        wgt.section_id = 0
+        self.build_choose_screen(wgt)
+        del wgt
 
         return self.sm
 
@@ -132,7 +137,7 @@ class MainApp(MDApp):
 
         root.ids.lbl.text = str(self.cart[root.prod_id])
         self.upd_cart_sum()
-
+# clash royale
 
     def upd_cart_sum(self):
         res = 0
@@ -143,7 +148,24 @@ class MainApp(MDApp):
 
 
     def order(self):
-        self.om.SendOrder(0, 0, 0, self.cart)
+        if sum(self.cart) > 0:
+            ord_id = random.randrange(10000)
+
+            dlg = MDDialog(
+                MDDialogHeadlineText(text="Номер вашего заказа "+str(ord_id)))
+            dlg.add_widget(
+                MDDialogButtonContainer(
+                    MDButton(
+                        MDButtonText(text="Ладно"),
+                        on_release=dlg.dismiss
+                    )
+                )
+            )
+            dlg.open()
+
+            self.om.SendOrder(ord_id, 0, 0, self.cart)
+            self.cart = [0 for _ in range(len(self.prods))]
+        self.update_choose()
 
 if __name__ == "__main__":
     Window.size = (600, 1000)

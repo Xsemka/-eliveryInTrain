@@ -60,18 +60,16 @@ MDScreen:
                     icon: "cart-variant"
                     on_release: app.update_cart()
 
-                MDActionTopAppBarButton:
-                    icon: "logout"
-                    on_release: app.sm.current = "auth"
-
         ScrollView:
             size_hint_y: 0.07
             do_scroll_y: False
             do_scroll_x: True
+            width: "2000dp"
             BoxLayout:
                 pos_hint: {"center_x": 0.5}
                 orientation: "horizontal"
                 id: sections
+                width: "2000dp"
                 spacing: "30dp"
                 padding: "30dp",0
 
